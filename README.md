@@ -1,69 +1,81 @@
-# 영수증 스마트 정산 시스템 (Retreat Receipt Manager)
+# 영수증 정산 시스템 (Retreat Receipt Manager)
 
-> **"복잡한 영수증과 예산 관리를 자동화하고, 총무의 업무 부담을 줄이기 위한 웹 기반 정산 시스템"**
+단체 행사 시 다수의 인원이 산발적으로 청구하는 영수증을 효율적으로 취합하고, 실시간으로 예산을 관리하기 위해 개발한 웹 기반 정산 시스템입니다. 
+기존 수기 작성이나 엑셀 취합 방식의 번거로움을 해결하고, 제한된 서버 환경에서 발생하는 이미지 처리 병목 현상을 소프트웨어적으로 최적화한 프로젝트입니다.
 
-![Python](https://img.shields.io/badge/Python-3.x-blue.svg) ![Flask](https://img.shields.io/badge/Flask-black?logo=flask) ![SQLite](https://img.shields.io/badge/SQLite-07405E?logo=sqlite&logoColor=white) ![VanillaJS](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
+## Tech Stack
+- Backend: Python 3.x, Flask, SQLite3
+- Frontend: HTML5, CSS3, Vanilla JavaScript, SheetJS
+- Data Processing: Pillow (PIL), pytesseract, PyMuPDF (fitz)
 
-## 프로젝트 개요
-단체 행사 시 다수의 인원이 산발적으로 청구하는 영수증을 효율적으로 취합하고 관리하기 위해 개발되었습니다. 모바일 환경에서 영수증을 찍어 쉽게 제출할 수 있으며, 관리자는 칸반 보드(Kanban Board) 형태의 대시보드에서 예산 현황과 실물 영수증 확인 여부를 직관적으로 파악할 수 있습니다.
+## 프로젝트 발전 과정 및 트러블슈팅
 
-## 기술 스택
-- **Backend:** Python, Flask, SQLite3
-- **Frontend:** HTML5, CSS3, Vanilla JavaScript, SheetJS (Excel Export)
-- **Data Processing:** Tesseract OCR, Pillow (Image Processing), PyMuPDF
+실제 사용자(총무)의 요구사항을 반영하며 단계적으로 기능을 고도화하고 성능을 최적화했습니다.
 
----
+### 1. MVP 구현 및 기초 OCR 연동
+- Flask와 SQLite를 활용해 영수증 이미지와 청구 내역을 저장하는 기본 시스템 구축.
+- Tesseract OCR을 연동하여 영수증 내 결제 금액과 일자를 자동 추출해 사용자가 입력한 값과 대조하는 기능 구현.
 
-## 단계별 개발 및 최적화 과정 (Development History)
+### 2. 칸반 보드 기반의 예산 추적 기능 도입
+- 지출 내역을 [팀 -> 세부 카테고리]의 2 Depth 구조로 재설계.
+- 팀별(총괄, 찬양, 레크, 나눔) 배정 예산 대비 지출 금액을 계산하여 잔여 예산 및 소진율(%)을 실시간으로 보여주는 칸반 보드 UI 도입.
+- 특수 비즈니스 로직 적용: '모임지원비' 항목의 경우 참석 인원에 따라 1인당 한도(12,000원)를 계산하여 지원 가능 금액을 시스템이 자동 보정.
 
-이 프로젝트는 사용자의 피드백을 반영하며 다음과 같이 점진적으로 발전했습니다.
+### 3. 관리자(총무) 기능 고도화
+- 외부 수입 관리: 지출뿐만 아니라 이월금, 후원금 등 수입 내역을 추가하여 총 예산에 동적 반영되도록 로직 수정.
+- 실무 맞춤형 UX: 관리자 대시보드 내에서 [정산완료], [실물영수증 확인] 상태를 토글할 수 있는 기능 추가.
+- 프라이빗 메모: 엑셀 추출 시에만 포함되고 일반 사용자에게는 노출되지 않는 관리자 전용 메모 컬럼 추가.
 
-### Phase 1: MVP 구현 및 OCR 도입
-- Flask와 SQLite를 활용한 기본적인 CRUD(생성, 읽기, 수정, 삭제) API 구축
-- Tesseract OCR을 연동하여 영수증 이미지 및 PDF에서 **날짜와 결제 금액 자동 추출** 기능 구현
-- 엑셀(Excel) 자동 추출 기능 연동
+### 4. 제한된 서버 환경에서의 OCR 성능 극한 최적화 (Troubleshooting)
 
-### Phase 2: 관리자 UX 개선 (정산 및 실물 확인)
-- 총무가 직관적으로 상태를 파악할 수 있도록 리스트에 `[정산완료]`, `[실물확인]` 상태 토글 체크박스 도입
-- 기존 데이터를 보존하면서 데이터베이스 스키마(Table)를 동적으로 `ALTER`하여 안전하게 기능 확장
+[문제 상황]
+무료 호스팅 서버(단일 코어, 제한된 메모리) 환경에서 스마트폰으로 촬영한 고해상도(5~15MB) 원본 이미지를 OCR로 분석할 때, 처리 시간이 10초 이상 소요되어 다중 접속 시 HTTP Timeout 에러가 빈번하게 발생했습니다.
 
-### Phase 3: 칸반 보드 뷰 및 데이터 연동 고도화
-- 영수증 내역을 **[팀 ➔ 세부 카테고리]**의 2Depth 구조로 재설계
-- 팀별(총괄팀, 찬양팀, 레크팀, 나눔팀) 예산을 설정하고, 모임지원비(인당 12,000원 제한) 등 특수 비즈니스 로직을 백엔드와 프론트엔드 양측에 적용
-- 부서별 칸반 보드 UI를 도입하여, 각 부서별 **예산 소진율(%) 및 잔여 예산 자동 계산** 기능 추가
+[해결 과정]
+서버 사양을 업그레이드하는 대신, 소프트웨어 단에서 이미지 연산량을 최소화하는 3단계 전처리 파이프라인을 구축했습니다.
 
-### Phase 4: 수입 관리 및 프라이빗 메모 기능
-- 지출뿐만 아니라 '이월금', '후원금' 등 **외부 수입 관리 모듈** 신설 (총 예산에 자동 합산 로직 추가)
-- 엑셀 추출 시 관리자만 볼 수 있는 **'총무 전용 프라이빗 메모'** 기능 및 DB 컬럼 추가
+① Downscaling (픽셀 연산량 축소)
+Pillow를 활용해 원본 이미지의 종횡비를 유지한 채 최대 해상도를 800x800px로 제한하여 연산 픽셀 수를 대폭 감소시켰습니다.
 
-### Phase 5: 극한의 OCR 성능 최적화 (Troubleshooting)
-무료 호스팅 서버(단일 코어) 환경에서 고해상도 영수증 사진 처리 시 발생하는 **Timeout(통신 실패) 병목 현상 해결**.
-1. **Downscaling:** 이미지 해상도 강제 축소(Max 800px)로 픽셀 연산량 80% 감소
-2. **1-bit Binarization:** 흑백을 넘어선 1-bit 이진화(Thresholding)로 메모리 점유율 최소화
-3. **OCR Whitelist:** 한글 인식의 막대한 연산량을 제거하고, 숫자와 날짜 포맷(`0123456789,-./`)만 스캔하도록 Tesseract 엔진 옵션(`--psm 6`, `whitelist`) 튜닝
-> **결과:** 기존 10초 이상 걸리던 분석 속도를 1~2초 내외로 단축하여 타임아웃 문제 100% 해결.
+② 1-Bit Binarization (메모리 점유율 최소화)
+단순한 그레이스케일(8-bit) 변환에 그치지 않고, 임계값(Threshold=140)을 설정해 모든 픽셀을 완벽한 흑(0)과 백(255)으로 치환하는 1-bit 이진화 연산을 적용했습니다.
+```python
+img = img.convert('L')
+img = img.point(lambda x: 0 if x < 140 else 255, '1')
+```
 
----
+③ Whitelist & PSM Tuning (엔진 연산 범위 통제)
+영수증에서 추출해야 할 핵심 정보는 '숫자(금액)'와 '날짜'뿐이므로, 연산이 무거운 한국어 모델 대신 가벼운 영어 모델을 사용했습니다. 
+또한 whitelist 옵션을 주입해 알파벳 등 불필요한 문자 탐색을 원천 차단했습니다.
+```python
+custom_config = r'--oem 3 --psm 6 -c tessedit_char_whitelist=0123456789,-./'
+extracted_text = pytesseract.image_to_string(img, lang='eng', config=custom_config)
+```
 
-## 💻 주요 기능 (Features)
+[최종 결과]
+기존 10~15초 소요되던 분석 시간을 1.5초 이내로 단축(약 85~90% 성능 향상)시켜 Timeout 문제를 완전히 해결하고 사용자 경험을 개선했습니다.
 
-1. **영수증 스캔 및 제출:** OCR을 활용한 금액/날짜 대조 및 사진/PDF 업로드
-2. **실시간 예산 모니터링 대시보드:** 총 수입/지출 및 부서별 잔여 예산 시각화
-3. **관리자 통합 제어:** 카테고리, 금액, 인원, 일자 등 제출된 영수증의 모든 항목 즉시 수정 가능
-4. **원클릭 엑셀 정산:** 날짜순 정렬 및 정산/실물/메모 등 모든 데이터가 포함된 엑셀 `.xlsx` 자동 생성
+## 핵심 기능 요약
+- 스마트 영수증 제출: 이미지/PDF 업로드 및 OCR 자동 금액 대조.
+- 실시간 예산 대시보드: 팀별/카테고리별 지출 현황 및 수입 내역 합산 관리.
+- 관리자 통합 제어: 영수증 정보 즉각 수정, 정산/실물 토글, 비밀 메모 작성.
+- 원클릭 엑셀 내보내기: SheetJS를 활용하여 화면에 렌더링된 데이터를 완벽한 포맷의 정산 내역서로 자동 변환.
 
-## ⚙️ 실행 방법 (How to run)
+## 로컬 환경 실행 방법
 
+1. Repository 클론 및 필수 패키지 설치
 ```bash
-# 1. 저장소 클론
-git clone [https://github.com/사용자이름/Retreat-Receipt-Manager.git](https://github.com/사용자이름/Retreat-Receipt-Manager.git)
-
-# 2. 필수 패키지 설치
+git clone https://github.com/사용자이름/Retreat-Receipt-Manager.git
+cd Retreat-Receipt-Manager
 pip install -r requirements.txt
+```
 
-# 3. (필수) 시스템에 Tesseract-OCR 설치되어 있어야 함
-# Ubuntu: sudo apt-get install tesseract-ocr
-# Windows: Tesseract 설치 파일 다운로드 및 환경변수 등록
+2. Tesseract OCR 설치 (시스템 환경)
+- Ubuntu: sudo apt-get install tesseract-ocr
+- Windows: Tesseract-OCR 바이너리 설치 후 시스템 환경변수(PATH)에 등록
 
-# 4. 앱 실행
+3. 로컬 서버 실행
+```bash
 python flask_app.py
+```
+브라우저에서 [http://127.0.0.1:5000](http://127.0.0.1:5000) 으로 접속하여 확인합니다.
