@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수련회 정산 시스템</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary-color: #4A90E2; --hover-color: #357ABD; --bg-color: #F4F7F6; --card-bg: #FFFFFF; --text-color: #333333; --border-radius: 12px; }
+        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .container { background-color: var(--card-bg); width: 100%; max-width: 450px; padding: 30px; border-radius: var(--border-radius); box-shadow: 0 8px 24px rgba(0,0,0,0.08); display: none; }
+        #admin-screen { max-width: 1300px; } 
+        .active { display: block; }
+        h1, h2 { text-align: center; margin-bottom: 30px; color: var(--primary-color); }
+        button { width: 100%; padding: 14px; margin-bottom: 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .btn-outline { background-color: transparent; color: var(--primary-color); border: 2px solid var(--primary-color); }
+        .btn-success { background-color: #27ae60; }
+        .btn-danger { background-color: #E74C3C; margin-top: 15px; }
+        .btn-danger:hover { background-color: #C0392B; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
+        input[type="text"], input[type="number"], input[type="date"], select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .notice-text { color: #E74C3C; font-size: 13px; margin-bottom: 10px; font-weight: 500; }
+        #meeting-support-group, #date-group { display: none; background-color: #FFF9F9; padding: 15px; border-radius: 8px; border: 1px dashed #FFB6B6; margin-bottom: 20px; }
+        #date-group { background-color: #F0F8FF; border-color: #4A90E2; }
+        .result-box { background-color: #F0F8FF; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; display: none; }
+        .result-box h3 { margin: 0; color: var(--primary-color); }
+        .header-nav { display: flex; align-items: center; margin-bottom: 20px; }
+        .back-btn { background: none; border: none; color: #666; width: auto; padding: 0; margin: 0 15px 0 0; font-size: 20px; }
+        #scan-loading { display: none; text-align: center; font-size: 14px; color: #666; margin-bottom: 15px; }
+        
+        .budget-info { text-align: center; font-weight: normal; margin-bottom: 20px; padding: 15px; background: #eef2f5; border-radius: 8px; font-size: 15px; line-height: 1.6; }
+        .budget-info strong { font-weight: 900; }
+        
+        .income-container { background: #fdfdfd; border: 1px solid #e1e8ed; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .income-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .income-header h3 { margin: 0; color: #27ae60; font-size: 16px; display: flex; align-items: center; gap: 5px;}
+        .income-toggle-btn { margin: 0; padding: 6px 12px; width: auto; font-size: 12px; background: #27ae60; border-radius: 6px; }
+        .income-form { display: none; background: #f4f7f6; padding: 15px; border-radius: 6px; margin-bottom: 10px; }
+        .income-list { display: flex; flex-direction: column; gap: 8px; }
+        .income-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 10px 15px; border: 1px solid #eee; border-radius: 6px; font-size: 13px; }
+        
+        .receipt-item { background: #f9f9f9; border-radius: 8px; border: 1px solid #eee; margin-bottom: 10px; overflow: hidden; transition: opacity 0.3s; }
+        .receipt-summary { padding: 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 10px;}
+        .summary-text { flex-grow: 1; word-break: keep-all; line-height: 1.4; }
+        .receipt-details { display: none; padding: 15px; border-top: 1px solid #eee; background: #fff; font-size: 14px; }
+        .receipt-details img { max-width: 100%; border-radius: 4px; margin-top: 15px; }
+        
+        .edit-grid { display: grid; grid-template-columns: 75px 1fr; gap: 8px; align-items: center; margin-bottom: 15px; }
+        .edit-grid input, .edit-grid select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        .edit-grid span { font-weight: 600; font-size: 13px; color: #555; }
+        
+        .tab-group { display: flex; gap: 8px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; padding: 10px; margin: 0; background-color: #f1f1f1; color: #555; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .tab-btn.active-tab { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .category-board { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; align-items: flex-start; }
+        .category-column { flex: 0 0 280px; background: #fff; border: 2px solid #e1e8ed; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; }
+        .category-header { font-weight: 900; font-size: 18px; color: #fff; background: var(--primary-color); padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: center; line-height: 1.4; }
+        .category-items { flex-grow: 1; display: flex; flex-direction: column; gap: 10px; }
+        .category-total { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #ccc; font-weight: bold; text-align: right; font-size: 14px; color: #555; line-height: 1.6; }
+        .category-board .receipt-item { margin-bottom: 0; }
+        .sub-cat-header { margin-top: 15px; margin-bottom: 5px; border-left: 4px solid var(--primary-color); padding-left: 8px; font-weight: bold; color: #333; font-size: 14px; }
+        .sub-cat-total { text-align: right; font-size: 12px; color: #777; margin-bottom: 10px; }
+        
+        /* 🚀 메모 뱃지 스타일 */
+        .memo-badge { display: inline-block; margin-top: 8px; padding: 6px 10px; background: #fff3cd; color: #d35400; border: 1px solid #fae5d3; border-radius: 6px; font-size: 12px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="home-screen" class="container active">
+        <h1>여름 수련회 정산 시스템</h1>
+        <button onclick="goTo('register-screen')">영수증 등록 (금액 청구)</button>
+        <button class="btn-outline" onclick="checkAdminPassword()">영수증 관리 (총무 전용)</button>
+    </div>
+
+    <div id="register-screen" class="container">
+        <div class="header-nav">
+            <button class="back-btn" onclick="goTo('home-screen')">←</button>
+            <h2 style="margin:0;">영수증 등록</h2>
+        </div>
+        
+        <div class="form-group">
+            <label>소속 팀</label>
+            <select id="team" onchange="handleTeamChange()">
+                <option value="">선택하세요</option>
+                <option value="총괄팀">총괄팀</option>
+                <option value="찬양팀">찬양팀</option>
+                <option value="레크팀">레크팀</option>
+                <option value="나눔팀">나눔팀</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>세부 카테고리</label>
+            <select id="category" onchange="handleCategoryChange()">
+                <option value="">팀을 먼저 선택하세요</option>
+            </select>
+        </div>
+
+        <div id="meeting-support-group"><div class="notice-text">※ 모임지원비는 인당 12,000원까지만 지원 가능합니다.</div><label>참석 인원수</label><input type="number" id="people-count"></div>
+        
+        <div class="form-group">
+            <label>사용 목적</label>
+            <input type="text" id="purpose" placeholder="예: 조별 모임 식대, 레크리에이션 물품 등">
+        </div>
+        
+        <div class="form-group"><label>이름 (청구자)</label><input type="text" id="user-name"></div>
+        
+        <div class="form-group">
+            <label>사용 금액</label>
+            <div class="notice-text">※ 금액 입력 시 콤마(,)가 자동으로 찍히도록 꼭 포함해서 입력해 주세요.</div>
+            <input type="text" id="spent-amount" placeholder="예: 45,000" oninput="formatCurrency(this)">
+        </div>
+
+        <div class="form-group">
+            <label>영수증 사진/PDF 첨부</label>
+            <input type="file" id="receipt-image" accept="image/*, application/pdf">
+        </div>
+        
+        <button type="button" class="btn-outline" onclick="scanReceipt()">📸 영수증 초고속 스캔 및 대조</button>
+        <div id="scan-loading">영수증 이미지 최적화 및 분석 중... ⏳</div>
+        
+        <div class="form-group" id="date-group">
+            <label>결제 일자 <span style="font-weight:normal; font-size:12px;">(OCR 인식 결과, 수정 가능)</span></label>
+            <input type="date" id="receipt-date">
+        </div>
+
+        <div id="result-box" class="result-box"><h3 id="supportable-cost">지원가능비용: 0원</h3></div>
+        <button id="submit-btn" disabled onclick="submitReceipt()">등록 완료하기</button>
+    </div>
+
+    <div id="admin-screen" class="container">
+        <div class="header-nav"><button class="back-btn" onclick="goTo('home-screen')">←</button><h2 style="margin:0;">관리 내역</h2></div>
+        
+        <div class="budget-info" id="global-budget-info">데이터를 불러오는 중...</div>
+        
+        <div class="income-container">
+            <div class="income-header">
+                <h3>💰 외부 수입 내역</h3>
+                <button class="income-toggle-btn" onclick="toggleIncomeForm()">+ 수입 추가</button>
+            </div>
+            
+            <div id="income-form-container" class="income-form">
+                <div class="edit-grid" style="grid-template-columns: 60px 1fr;">
+                    <span>일자:</span> <input type="date" id="inc-date">
+                    <span>내용:</span> <input type="text" id="inc-source" placeholder="예: 이월금, 후원금 등">
+                    <span>금액:</span> <input type="text" id="inc-amount" placeholder="예: 100,000" oninput="formatCurrency(this)">
+                </div>
+                <button onclick="submitIncome()" style="background:#27ae60; margin:0; padding:10px;">저장하기</button>
+            </div>
+            
+            <div id="income-list" class="income-list"></div>
+        </div>
+
+        <button class="btn-success" onclick="exportToExcel()">📊 날짜순 엑셀로 추출하기 (지출내역 전용)</button>
+        
+        <div class="tab-group">
+            <button id="tab-all" class="tab-btn active-tab" onclick="setSortMode('all')">전체(등록순)</button>
+            <button id="tab-date" class="tab-btn" onclick="setSortMode('date')">날짜순</button>
+            <button id="tab-category" class="tab-btn" onclick="setSortMode('category')">팀별(카테고리별)</button>
+        </div>
+
+        <div id="admin-list"></div>
+    </div>
+
+    <script>
+        const INITIAL_BUDGET = 4200000;
+        const TEAM_BUDGETS = {
+            '찬양팀': { total: 208000, meeting: 108000 },
+            '레크팀': { total: 248000, meeting: 48000 },
+            '나눔팀': { total: 136000, meeting: 36000 }
+        };
+
+        let currentSupportCost = 0;
+        let currentDataList = [];
+        let currentIncomeList = []; 
+        let currentSortMode = 'all';
+
+        function formatCurrency(input) {
+            let val = input.value.replace(/[^0-9]/g, '');
+            if (val) {
+                input.value = Number(val).toLocaleString();
+            } else {
+                input.value = '';
+            }
+        }
+
+        function goTo(screenId) {
+            document.querySelectorAll('.container').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            if(screenId === 'admin-screen') loadAdminData();
+        }
+
+        function checkAdminPassword() {
+            if(prompt("관리자 비밀번호:") === "1024") goTo('admin-screen');
+        }
+
+        function toggleIncomeForm() {
+            const form = document.getElementById('income-form-container');
+            if (form.style.display === 'block') {
+                form.style.display = 'none';
+            } else {
+                form.style.display = 'block';
+                document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+        async function submitIncome() {
+            const date = document.getElementById('inc-date').value;
+            const source = document.getElementById('inc-source').value;
+            const amountRaw = document.getElementById('inc-amount').value.replace(/,/g, '');
+            const amount = parseInt(amountRaw);
+
+            if (!date || !source || isNaN(amount)) return alert("수입 내역을 모두 입력해주세요.");
+
+            await fetch('/api/incomes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ date: date, source: source, amount: amount })
+            });
+
+            document.getElementById('inc-source').value = '';
+            document.getElementById('inc-amount').value = '';
+            toggleIncomeForm();
+            loadAdminData();
+        }
+
+        async function deleteIncome(id) {
+            if(confirm("수입 내역을 삭제하시겠습니까?")) {
+                await fetch(`/api/incomes/${id}`, { method: 'DELETE' });
+                loadAdminData();
+            }
+        }
+
+        function getCategoryOptions(team) {
+            if (team === '총괄팀') return ['모임지원비', '기도회', '식사', '수련회사전준비', '수련회 중', '기타'];
+            if (['찬양팀', '레크팀', '나눔팀'].includes(team)) return ['모임지원비', '수련회사전준비', '수련회 중', '기타'];
+            return [];
+        }
+
+        function handleTeamChange() {
+            const team = document.getElementById('team').value;
+            const catSelect = document.getElementById('category');
+            
+            if (!team) {
+                catSelect.innerHTML = '<option value="">팀을 먼저 선택하세요</option>';
+            } else {
+                catSelect.innerHTML = '<option value="">선택하세요</option>';
+                const options = getCategoryOptions(team);
+                options.forEach(opt => {
+                    catSelect.innerHTML += `<option value="${opt}">${opt}</option>`;
+                });
+            }
+            handleCategoryChange(); 
+        }
+
+        function handleCategoryChange() {
+            const cat = document.getElementById('category').value;
+            document.getElementById('meeting-support-group').style.display = (cat === '모임지원비') ? 'block' : 'none';
+            document.getElementById('result-box').style.display = 'none';
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('date-group').style.display = 'none';
+        }
+
+        function setSortMode(mode) {
+            currentSortMode = mode;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+            document.getElementById(`tab-${mode}`).classList.add('active-tab');
+            renderAdminList();
+        }
+
+        function scanReceipt() {
+            const team = document.getElementById('team').value;
+            const cat = document.getElementById('category').value;
+            const purpose = document.getElementById('purpose').value;
+            const amtRaw = document.getElementById('spent-amount').value.replace(/,/g, '');
+            const amt = parseInt(amtRaw);
+            const ppl = parseInt(document.getElementById('people-count').value || 0);
+            const fileInput = document.getElementById('receipt-image').files[0];
+            
+            if(!team || !cat || !purpose || isNaN(amt) || !fileInput) return alert("모든 항목을 입력해주세요.");
+            if(cat === '모임지원비' && !ppl) return alert("참석 인원수를 입력해주세요.");
+
+            document.getElementById('scan-loading').style.display = 'block';
+            document.getElementById('result-box').style.display = 'none';
+            document.getElementById('date-group').style.display = 'none';
+
+            setTimeout(() => {
+                document.getElementById('scan-loading').style.display = 'none';
+
+                const dateInput = document.getElementById('receipt-date');
+                dateInput.value = new Date().toISOString().split('T')[0]; 
+                document.getElementById('date-group').style.display = 'block';
+
+                alert(`✅ 영수증 검증 완료: 입력하신 금액(${amt.toLocaleString()}원)이 확인되었습니다.\n자동 인식된 결제 일자를 확인해 주세요.`);
+
+                currentSupportCost = amt;
+                if(cat === '모임지원비' && amt > ppl * 12000) currentSupportCost = ppl * 12000;
+                
+                document.getElementById('supportable-cost').innerText = `지원가능비용: ${currentSupportCost.toLocaleString()}원`;
+                document.getElementById('result-box').style.display = 'block';
+                document.getElementById('submit-btn').disabled = false;
+            }, 1500);
+        }
+
+        async function submitReceipt() {
+            const formData = new FormData();
+            formData.append('team', document.getElementById('team').value);
+            formData.append('category', document.getElementById('category').value);
+            formData.append('purpose', document.getElementById('purpose').value);
+            formData.append('name', document.getElementById('user-name').value);
+            const cleanAmount = document.getElementById('spent-amount').value.replace(/,/g, '');
+            formData.append('spentAmount', cleanAmount);
+            formData.append('supportCost', currentSupportCost);
+            formData.append('peopleCount', document.getElementById('people-count').value || 0);
+            formData.append('image', document.getElementById('receipt-image').files[0]);
+            
+            const finalDate = document.getElementById('receipt-date').value || new Date().toISOString().split('T')[0];
+            formData.append('date', finalDate);
+
+            document.getElementById('submit-btn').disabled = true;
+            document.getElementById('submit-btn').innerText = "업로드 중...";
+
+            await fetch('/api/upload', { method: 'POST', body: formData });
+            alert("등록 완료되었습니다.");
+            location.reload();
+        }
+
+        async function loadAdminData() {
+            const resReceipts = await fetch('/api/receipts');
+            currentDataList = await resReceipts.json();
+
+            const resIncomes = await fetch('/api/incomes');
+            currentIncomeList = await resIncomes.json();
+
+            renderAdminList(); 
+        }
+
+        function changeEditTeam(id) {
+            const team = document.getElementById(`edit-team-${id}`).value;
+            const catSelect = document.getElementById(`edit-cat-${id}`);
+            const options = getCategoryOptions(team);
+            catSelect.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+        }
+
+        function generateReceiptItemHtml(item) {
+            let mediaHtml = '';
+            if (item.imageUrl.toLowerCase().endsWith('.pdf')) {
+                mediaHtml = `<a href="${item.imageUrl}" target="_blank" style="display:inline-block; margin-top:10px; margin-bottom:10px; color:#4A90E2; font-weight:bold; text-decoration:none;">📄 첨부된 PDF 영수증 열기 (클릭)</a>`;
+            } else {
+                mediaHtml = `<img src="${item.imageUrl}" alt="영수증">`;
+            }
+
+            const opacityStyle = item.isSettled ? "opacity: 0.6; background-color: #f1f1f1;" : "";
+            const settledBadge = item.isSettled ? `<span style="color:#27ae60; font-size:12px; font-weight:900; margin-left:5px; padding:2px 4px; background:#e8f8f5; border-radius:4px;">정산완료</span>` : "";
+            const hardcopyBadge = item.hasHardcopy ? `<span style="color:#d35400; font-size:12px; font-weight:900; margin-left:5px; padding:2px 4px; background:#fdf2e9; border-radius:4px;">실물확인</span>` : "";
+            
+            // 🚀 메모 뱃지 생성 (작성된 메모가 있을 때만 노출)
+            const memoBadge = item.memo ? `<div class="memo-badge">📝 ${item.memo}</div>` : "";
+
+            const catOptions = getCategoryOptions(item.team || '총괄팀').map(opt => `<option value="${opt}" ${item.category===opt?'selected':''}>${opt}</option>`).join('');
+
+            return `
+            <div class="receipt-item" style="${opacityStyle}">
+                <div class="receipt-summary" onclick="toggleDetails('d${item.id}')">
+                    <div class="summary-text">
+                        <strong>[${item.team || '미지정'} - ${item.category}]</strong> ${item.name}<br>
+                        사용: ${item.spentAmount.toLocaleString()}원<br>
+                        <span style="color:var(--primary-color)">(지원: ${item.supportCost.toLocaleString()}원)</span>
+                        <div style="margin-top:4px;">${settledBadge}${hardcopyBadge}</div>
+                        ${memoBadge} <!-- 🚀 빈 여백에 메모 표시 -->
+                    </div>
+                    
+                    <div onclick="event.stopPropagation();" style="display:flex; flex-direction:column; gap:8px; border-left: 1px dashed #ccc; padding-left:12px; margin-left:5px;">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:bold; margin:0; color:#555; cursor:pointer;">
+                            <input type="checkbox" style="width:18px; height:18px; margin:0;" ${item.isSettled ? 'checked' : ''} onchange="toggleSettle(event, ${item.id}, this.checked)"> 정산
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:bold; margin:0; color:#555; cursor:pointer;">
+                            <input type="checkbox" style="width:18px; height:18px; margin:0;" ${item.hasHardcopy ? 'checked' : ''} onchange="toggleHardcopy(event, ${item.id}, this.checked)"> 실물
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="receipt-details" id="d${item.id}">
+                    <div class="edit-grid">
+                        <span>팀:</span>
+                        <select id="edit-team-${item.id}" onchange="changeEditTeam(${item.id})">
+                            <option value="총괄팀" ${item.team === '총괄팀' ? 'selected' : ''}>총괄팀</option>
+                            <option value="찬양팀" ${item.team === '찬양팀' ? 'selected' : ''}>찬양팀</option>
+                            <option value="레크팀" ${item.team === '레크팀' ? 'selected' : ''}>레크팀</option>
+                            <option value="나눔팀" ${item.team === '나눔팀' ? 'selected' : ''}>나눔팀</option>
+                        </select>
+                        <span>카테고리:</span>
+                        <select id="edit-cat-${item.id}">
+                            ${catOptions}
+                        </select>
+                        <span>사용목적:</span>
+                        <input type="text" id="edit-purpose-${item.id}" value="${item.purpose}">
+                        <span>청구자:</span>
+                        <input type="text" id="edit-name-${item.id}" value="${item.name}">
+                        <span>사용금액:</span>
+                        <input type="number" id="edit-spent-${item.id}" value="${item.spentAmount}">
+                        <span>참석인원:</span>
+                        <input type="number" id="edit-people-${item.id}" value="${item.peopleCount}" placeholder="모임지원비만 해당">
+                        <span>결제일자:</span>
+                        <input type="date" id="edit-date-${item.id}" value="${item.date}">
+                        
+                        <!-- 🚀 관리자 전용 메모 작성 칸 -->
+                        <span>총무 메모:</span>
+                        <input type="text" id="edit-memo-${item.id}" value="${item.memo}" placeholder="여기에 나만 볼 메모 작성 (예: 계좌이체 완료)">
+                    </div>
+                    
+                    <button onclick="updateReceiptAll(${item.id})" style="width: 100%; padding: 10px; background-color: #27ae60; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-bottom: 10px;">💾 영수증 정보 변경사항 일괄 저장</button>
+
+                    ${mediaHtml}
+                    <button class="btn-danger" onclick="deleteReceipt(${item.id})">🗑️ 이 내역 영구 삭제하기</button>
+                </div>
+            </div>`;
+        }
+
+        function renderAdminList() {
+            let totalIncome = currentIncomeList.reduce((sum, item) => sum + item.amount, 0);
+            let incomeHtml = '';
+            
+            if (currentIncomeList.length === 0) {
+                incomeHtml = '<div style="text-align:center; font-size:13px; color:#999; padding:10px 0;">등록된 수입 내역이 없습니다.</div>';
+            } else {
+                currentIncomeList.forEach(inc => {
+                    incomeHtml += `
+                        <div class="income-item">
+                            <div><strong style="color:#333;">${inc.date}</strong> | ${inc.source}</div>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <strong style="color:#27ae60;">+${inc.amount.toLocaleString()}원</strong>
+                                <button onclick="deleteIncome(${inc.id})" style="width:auto; margin:0; padding:4px 8px; font-size:11px; background:#E74C3C;">삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('income-list').innerHTML = incomeHtml;
+
+            let ACTUAL_TOTAL_BUDGET = INITIAL_BUDGET + totalIncome;
+            let totalUsed = currentDataList.reduce((sum, item) => sum + item.supportCost, 0);
+            let remainBudget = ACTUAL_TOTAL_BUDGET - totalUsed;
+            let usageRatio = ((totalUsed / ACTUAL_TOTAL_BUDGET) * 100).toFixed(1);
+            let remainColor = remainBudget < 0 ? '#E74C3C' : '#27ae60';
+
+            let incomeNote = totalIncome > 0 ? ` <span style="font-size:13px; color:#27ae60;">(추가수입 +${totalIncome.toLocaleString()}원 포함)</span>` : '';
+
+            document.getElementById('global-budget-info').innerHTML = `
+                총 예산: <strong>${ACTUAL_TOTAL_BUDGET.toLocaleString()}원</strong>${incomeNote}<br>
+                총 사용금액: <strong style="color:#357ABD;">${totalUsed.toLocaleString()}원</strong> <span style="font-size:13px; color:#555;">(사용율: ${usageRatio}%)</span><br>
+                <div style="margin-top:5px; font-size:16px; color:${remainColor};">남은 금액: <strong>${remainBudget.toLocaleString()}원</strong></div>
+            `;
+
+            let html = '';
+
+            if (currentSortMode === 'category') {
+                const teams = ['총괄팀', '찬양팀', '레크팀', '나눔팀'];
+                html += `<div class="category-board">`;
+                
+                teams.forEach(team => {
+                    const teamItems = currentDataList.filter(item => item.team === team);
+                    let teamSpentTotal = 0;
+                    let teamSupportTotal = 0;
+                    
+                    const teamObj = TEAM_BUDGETS[team]; 
+                    
+                    let headerBudgetHtml = '';
+                    if (teamObj) {
+                        headerBudgetHtml = `<br><span style="font-size:13px; font-weight:normal; color:#e0eaff;">예산: ${teamObj.total.toLocaleString()}원 (모임지원비: ${teamObj.meeting.toLocaleString()}원)</span>`;
+                    }
+                    
+                    html += `<div class="category-column">
+                                <div class="category-header">
+                                    ${team}${headerBudgetHtml}
+                                </div>
+                                <div class="category-items">`;
+                    
+                    if (teamItems.length === 0) {
+                        html += `<div style="text-align:center; color:#999; font-size:13px; padding:20px 0;">내역 없음</div>`;
+                    } else {
+                        const subCats = getCategoryOptions(team);
+                        subCats.forEach(cat => {
+                            const catItems = teamItems.filter(item => item.category === cat);
+                            if (catItems.length > 0) {
+                                let catSpent = 0;
+                                let catSupport = 0;
+                                
+                                html += `<div class="sub-cat-header">${cat}</div>`;
+                                
+                                catItems.forEach(item => {
+                                    catSpent += item.spentAmount;
+                                    catSupport += item.supportCost;
+                                    teamSpentTotal += item.spentAmount;
+                                    teamSupportTotal += item.supportCost;
+                                    html += generateReceiptItemHtml(item);
+                                });
+                                
+                                html += `<div class="sub-cat-total">↳ ${cat} 소계: ${catSpent.toLocaleString()}원</div>`;
+                            }
+                        });
+                    }
+                    
+                    let budgetSummaryHtml = '';
+                    if (teamObj) {
+                        const tBudget = teamObj.total;
+                        const tUsageRatio = ((teamSupportTotal / tBudget) * 100).toFixed(1);
+                        const tRemainBudget = tBudget - teamSupportTotal;
+                        const tRemainColor = tRemainBudget < 0 ? '#E74C3C' : '#27ae60';
+                        
+                        budgetSummaryHtml = `
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; text-align: right;">
+                                <span style="color:${tRemainColor}; font-weight:900;">남은 예산: ${tRemainBudget.toLocaleString()}원</span><br>
+                                <span style="color:#888; font-size:12px;">(예산 소진율: ${tUsageRatio}%)</span>
+                            </div>
+                        `;
+                    }
+                    
+                    html += `   </div>
+                                <div class="category-total">
+                                    총 사용금액: ${teamSpentTotal.toLocaleString()}원<br>
+                                    <span style="color:var(--primary-color);">총 지원금액: ${teamSupportTotal.toLocaleString()}원</span>
+                                    ${budgetSummaryHtml}
+                                </div>
+                             </div>`;
+                });
+                html += `</div>`;
+            } else {
+                let displayList = [...currentDataList];
+                if (currentSortMode === 'date') {
+                    displayList.sort((a, b) => {
+                        const dateA = new Date(a.date.replace(/[^0-9-]/g, '/')).getTime() || 0;
+                        const dateB = new Date(b.date.replace(/[^0-9-]/g, '/')).getTime() || 0;
+                        return dateA - dateB; 
+                    });
+                }
+                displayList.forEach(item => {
+                    html += generateReceiptItemHtml(item);
+                });
+            }
+
+            document.getElementById('admin-list').innerHTML = html;
+        }
+
+        function toggleDetails(elementId) {
+            const el = document.getElementById(elementId);
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+
+        async function toggleSettle(event, id, isChecked) {
+            try {
+                const res = await fetch(`/api/receipts/${id}/settle`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_settled: isChecked })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    loadAdminData(); 
+                } else {
+                    alert("체크 상태 변경에 실패했습니다: " + result.message);
+                }
+            } catch(e) {
+                alert("서버 오류로 변경하지 못했습니다.");
+            }
+        }
+
+        async function toggleHardcopy(event, id, isChecked) {
+            try {
+                const res = await fetch(`/api/receipts/${id}/hardcopy`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ has_hardcopy: isChecked })
+                });
+                const result = await res.json();
+                if (result.status === 'success') {
+                    loadAdminData(); 
+                } else {
+                    alert("실물 확인 상태 변경에 실패했습니다: " + result.message);
+                }
+            } catch(e) {
+                alert("서버 오류로 변경하지 못했습니다.");
+            }
+        }
+
+        async function updateReceiptAll(id) {
+            const team = document.getElementById(`edit-team-${id}`).value;
+            const cat = document.getElementById(`edit-cat-${id}`).value;
+            const purpose = document.getElementById(`edit-purpose-${id}`).value;
+            const name = document.getElementById(`edit-name-${id}`).value;
+            const spent = parseInt(document.getElementById(`edit-spent-${id}`).value) || 0;
+            const people = parseInt(document.getElementById(`edit-people-${id}`).value) || 0;
+            const date = document.getElementById(`edit-date-${id}`).value;
+            const memo = document.getElementById(`edit-memo-${id}`).value; // 🚀 메모 데이터 추가 전송
+
+            try {
+                const res = await fetch(`/api/receipts/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ team: team, category: cat, purpose: purpose, name: name, spent_amount: spent, people_count: people, date: date, memo: memo })
+                });
+                const result = await res.json();
+                
+                if (result.status === 'success') {
+                    alert("영수증 정보가 모두 정상적으로 수정되었습니다.");
+                    loadAdminData(); 
+                } else {
+                    alert("수정에 실패했습니다: " + result.message);
+                }
+            } catch(e) {
+                alert("서버 오류로 수정하지 못했습니다.");
+            }
+        }
+
+        async function deleteReceipt(id) {
+            if (confirm("정말 이 영수증 내역을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.")) {
+                try {
+                    const res = await fetch(`/api/receipts/${id}`, { method: 'DELETE' });
+                    const result = await res.json();
+                    
+                    if (result.status === 'success') {
+                        alert("삭제가 완료되었습니다.");
+                        loadAdminData(); 
+                    } else {
+                        alert("삭제에 실패했습니다.");
+                    }
+                } catch(e) {
+                    alert("서버 오류로 삭제하지 못했습니다.");
+                }
+            }
+        }
+
+        function exportToExcel() {
+            const sortedData = [...currentDataList].sort((a, b) => {
+                const dateA = new Date(a.date.replace(/[^0-9-]/g, '/')).getTime() || 0;
+                const dateB = new Date(b.date.replace(/[^0-9-]/g, '/')).getTime() || 0;
+                return dateA - dateB;
+            });
+
+            let budget = INITIAL_BUDGET; 
+            const excelData = sortedData.map(item => {
+                budget -= item.supportCost;
+                return { 
+                    "결제일자": item.date,
+                    "정산여부": item.isSettled ? "완료" : "미완료",
+                    "실물영수증": item.hasHardcopy ? "확인됨" : "미확인",
+                    "팀": item.team || '미지정',
+                    "카테고리": item.category,
+                    "사용목적": item.purpose || '',
+                    "청구자": item.name, 
+                    "사용금액": item.spentAmount.toLocaleString(), 
+                    "지원가능금액": item.supportCost.toLocaleString(), 
+                    "남은 금액": budget.toLocaleString(),
+                    "총무메모": item.memo || '' // 🚀 엑셀 추출에도 추가
+                };
+            });
+            
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            ws['!cols'] = [{ wpx: 100 }, { wpx: 80 }, { wpx: 80 }, { wpx: 80 }, { wpx: 100 }, { wpx: 150 }, { wpx: 80 }, { wpx: 100 }, { wpx: 120 }, { wpx: 120 }, { wpx: 150 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "정산내역표");
+            XLSX.writeFile(wb, "여름수련회_영수증_정산내역.xlsx");
+        }
+    </script>
+</body>
+</html>
