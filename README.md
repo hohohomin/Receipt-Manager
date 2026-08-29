@@ -4,10 +4,10 @@
 
 ![Python](https://img.shields.io/badge/Python-3.x-blue.svg) ![Flask](https://img.shields.io/badge/Flask-black?logo=flask) ![SQLite](https://img.shields.io/badge/SQLite-07405E?logo=sqlite&logoColor=white) ![VanillaJS](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
 
-## 📌 프로젝트 개요
+## 프로젝트 개요
 단체 행사 시 다수의 인원이 산발적으로 청구하는 영수증을 효율적으로 취합하고 관리하기 위해 개발되었습니다. 모바일 환경에서 영수증을 찍어 쉽게 제출할 수 있으며, 관리자는 칸반 보드(Kanban Board) 형태의 대시보드에서 예산 현황과 실물 영수증 확인 여부를 직관적으로 파악할 수 있습니다.
 
-## 🛠️ 기술 스택
+## 기술 스택
 - **Backend:** Python, Flask, SQLite3
 - **Frontend:** HTML5, CSS3, Vanilla JavaScript, SheetJS (Excel Export)
 - **Data Processing:** Tesseract OCR, Pillow (Image Processing), PyMuPDF
